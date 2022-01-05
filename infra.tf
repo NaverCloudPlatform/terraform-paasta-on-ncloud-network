@@ -206,3 +206,27 @@ resource "ncloud_nat_gateway" "nat_gateway" {
   zone   = "KR-1"          // 수도권: KR-1, 남부권 KRS-1
   name   = "paasta-nat-gw" // NAT Gateway 이름 
 }
+
+data "ncloud_route_table" "reoute_table" {
+  vpc_no                = ncloud_vpc.vpc.id
+  supported_subnet_type = "PRIVATE"
+  filter {
+    name = "is_default"
+    values = ["true"]
+  }
+}
+
+resource "ncloud_route" "route" {
+  route_table_no         = data.ncloud_route_table.reoute_table.id
+  destination_cidr_block = "0.0.0.0/0"
+  target_type            = "NATGW"  // NATGW (NAT Gateway) | VPCPEERING (VPC Peering) | VGW (Virtual Private Gateway).
+  target_name            = ncloud_nat_gateway.nat_gateway.name
+  target_no              = ncloud_nat_gateway.nat_gateway.id
+}
+
+resource "ncloud_lb" "lb" {
+  name = "paasta-lb"
+  network_type = "PUBLIC"
+  type = "NETWORK"
+  subnet_no_list = [ ncloud_subnet.paasta_lb_subnet.subnet_no ]
+}
